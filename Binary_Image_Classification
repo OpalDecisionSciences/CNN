@@ -1,0 +1,88 @@
+
+# Convolutional Neural Network - Cat or Dog Image
+
+# Import Packages
+import numpy as np
+import tensorflow as tf
+from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
+
+tf.__version__
+# Part 1 - Data Preprocessing
+# Training Set - Image Augmentation
+# Geometrical Transformations to Prevent Overfitting
+# Transvections to Shift Pixels, Horizontal Flips, Zoom In/Out
+train_data = ImageDataGenerator(
+    # feature_scaling pixel values
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+
+training_set = train_data.flow_from_directory(
+    'dataset/training_set',
+    target_size=(64, 64),
+    batch_size=32,
+    class_mode='binary'
+)
+
+# Test Set
+test_data = ImageDataGenerator(rescale=1./255)
+
+test_set = test_data.flow_from_directory(
+    'dataset/test_set',
+    target_size=(64, 64),
+    batch_size=32,
+    class_mode='binry'
+)
+
+# Part 2 - Building the CNN
+# Initializing CNN as a Sequence of Layers Opposed to a Computational Graph
+cnn = tf.keras.models.Sequential()
+
+# Step 1 - Convolution - Feature Detector
+cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu', imput_shape=[64, 64, 3]))
+
+# Step 2 - Pooling
+cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, slide=2))
+
+# Add Second Convolutional Layer
+cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu'))
+cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+
+# Step 3 - Flattening
+cnn.add(tf.keras.layers.Flatten())
+
+# Step 4 - Full Connection
+cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
+
+# Step 5 - Output Layer
+cnn.add(tf.keras.layers.Desnse(units=1, activation='sigmoid'))
+
+# Part 3 - Training CNN
+# Compiling CNN - Adam Optimizer for Stochastic Gradient Descent, Loss Function, and Metrics
+cnn.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Training on Training Set; Evaluating on Test Set
+cnn.fit(x=training_set, validation_data='test_set', epochs=25)
+
+# Part 4 - Making a Single Prediction
+test_image = image.load_img('dataset/simgle_prediction/cat_or_dog_1.jpg', target_size=(64, 64))
+# Predict method expects imput image as 2D array
+test_image = image.img_to_array(test_image)
+# cnn was trained accepting batches of images (32)
+# we need to add an extra dimension as the first dimension to correspond to the batch_size
+test_image = np.expand_dims(test_image, axis=0)
+# normalize the prediction
+result = cnn.predict(test_image/255.0)
+# get which indices correspond to which classes; 1 = dog, 0 = cat
+training_set.class_indices
+# get access to the batch, inside the batch get access to the first and only element of the batch
+# first element of the batch corresponds to the prediction
+if result[0][0] > 0.5:
+    prediction = 'dog'
+else:
+    prediction = 'cat'
+
+print(prediction)
